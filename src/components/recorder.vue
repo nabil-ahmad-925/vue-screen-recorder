@@ -1,10 +1,10 @@
 <template>
   <div>
     <button class="button button1" @click="recordScreen">
-      {{ startBtnContent || "Start Recording" }}
+      Start Recording
     </button>
     <button class="button button1" @click="stopScreenRecording">
-      {{ stopBtnContent || "Stop Recording" }}
+      Stop Recording
     </button>
     <video id="output" autoplay controls width="500px" height="500px"></video>
   </div>
@@ -14,18 +14,7 @@
 export default {
   name: "HelloWorld",
   props: {
-    maxRecordingTime: {
-      type: Number,
-      default: 0,
-    },
-    startBtnContent: {
-      type: String,
-      default: "",
-    },
-    stopBtnContent: {
-      type: String,
-      default: "",
-    },
+    msg: String,
   },
   data() {
     return {
@@ -33,22 +22,20 @@ export default {
       voiceStream: null,
       combineStream: null,
       mediaRecorder: null,
-      timer: 0,
     };
   },
   methods: {
     async recordScreen() {
       try {
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-          // audio: true,
-          video: { mediaSource: "screen" },
-        });
         // voiceStream for recording voice with screen recording
         this.voiceStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: false,
         });
-
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+          audio: true,
+          video: { mediaSource: "screen" },
+        });
         // Combine both video/audio stream with MediaStream object
         this.combineStream = new MediaStream([
           ...this.screenStream.getVideoTracks(),
@@ -70,18 +57,17 @@ export default {
         recordedChunks.push(e.data);
       };
       this.mediaRecorder.onstop = () => {
+        this.combineStream.forEach((s) =>
+          s.getTracks().forEach((t) => t.stop())
+        );
+
         this.saveFile(recordedChunks);
         console.log("called", this.mediaRecorder);
       };
       this.screenStream.onstop = () => {
         console.log("innnnnnnnnnnnnn");
       };
-      this.mediaRecorder.start(200); // For every 200ms the stream data will be stored in a separate chunk.
-      this.startTimer();
-      this.screenStream.getVideoTracks()[0].onended = () => {
-        console.log("callled:::::::::::::::::::");
-        this.mediaRecorder.stop();
-      };
+      this.mediaRecorder.start(); // For every 200ms the stream data will be stored in a separate chunk.
     },
     stopScreenRecording() {
       this.mediaRecorder.stop();
@@ -110,22 +96,6 @@ export default {
       // Assign the url to the output video tag and anchor
       output.src = url;
       // anc.href = url;
-      this.screenStream.getTracks().forEach((track) => track.stop());
-      this.voiceStream.getTracks().forEach((track) => track.stop());
-      this.$emit("recordedScreen", blobData);
-    },
-
-    startTimer() {
-      if (this.maxRecordingTime > 0) {
-        let interval = setInterval(() => {
-          if (this.timer === this.maxRecordingTime) {
-            clearInterval(interval);
-            this.stopScreenRecording();
-          }
-          ++this.timer;
-          console.log("timer", this.timer);
-        }, 1 * 1000);
-      }
     },
   },
 };
