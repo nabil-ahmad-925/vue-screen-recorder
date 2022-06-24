@@ -1,58 +1,98 @@
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+  <div>
+    <button class="button button1" @click="recordScreen">
+      Start Recording
+    </button>
+    <button class="button button1" @click="stopScreenRecording">
+      Stop Recording
+    </button>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'HelloWorld',
+  name: "HelloWorld",
   props: {
-    msg: String
-  }
-}
+    msg: String,
+  },
+  data() {
+    return {
+      screenStream: null,
+      mediaRecorder: null,
+    };
+  },
+  methods: {
+    async recordScreen() {
+      try {
+        // voiceStream for recording voice with screen recording
+        this.voiceStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+          audio: true,
+          video: { mediaSource: "screen" },
+        });
+        this.createRecorder();
+      } catch (error) {
+        console.log("error", error);
+      }
+    },
+    createRecorder() {
+      // the stream data is stored in this array
+      let recordedChunks = [];
+
+      this.mediaRecorder = new MediaRecorder(this.screenStream);
+
+      this.mediaRecorder.ondataavailable = function (e) {
+        if (e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+      this.mediaRecorder.onstop = () => {
+        this.saveFile(recordedChunks);
+        console.log("called", this.mediaRecorder);
+        this.mediaRecorder.getTracks().forEach((track) => track.stop());
+        recordedChunks = [];
+      };
+      this.mediaRecorder.start(200); // For every 200ms the stream data will be stored in a separate chunk.
+    },
+    stopScreenRecording() {
+      this.mediaRecorder.stop();
+    },
+    saveFile(recordedChunks) {
+      const blob = new Blob(recordedChunks, {
+        type: "video/webm",
+      });
+      // this.mediaRecorder = null;
+      console.log("blob:::", blob);
+      // let filename = window.prompt("Enter file name"),
+      //   downloadLink = document.createElement("a");
+      // downloadLink.href = URL.createObjectURL(blob);
+      // downloadLink.download = `${filename}.webm`;
+
+      // document.body.appendChild(downloadLink);
+      // downloadLink.click();
+      // URL.revokeObjectURL(blob); // clear from memory
+      // document.body.removeChild(downloadLink);
+    },
+  },
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
+.button {
+  background-color: #4caf50; /* Green */
+  border: none;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
   display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
 }
 </style>
+>
